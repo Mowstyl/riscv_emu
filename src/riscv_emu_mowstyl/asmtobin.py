@@ -19,7 +19,7 @@
 
 
 from __future__ import annotations
-from instruction_set import InstructionType, getInstructionSet
+from instruction_set import InstructionType, getInstructionSet, reg_alias
 from bintoasm import bin_to_asm
 from math import ceil
 
@@ -54,7 +54,11 @@ Groups:
 '''
 riscv_regex = r"^\s*([a-z\.]+)\s+x([1-3]?[0-9])\s*,\s*(?:(?:(?:x([1-3]?[0-9])\s*,\s*)?(?:(?:x([1-3]?[0-9]))|(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)))|(?:(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)\s*\(\s*x([1-3]?[0-9])\s*\)))$"
 
-compiled_regex = re.compile(riscv_regex)
+reg_regex = r"((?:\s*,|\()|\s+)((?:(?:s|t|a)[1-9]*[0-9])|zero|ra|sp|tp|gp|fp)"
+
+riscv_parser = re.compile(riscv_regex)
+
+reg_parser = re.compile(reg_regex)
 
 
 BIT_MASK: List[int] = [np.uint32(1 << i) for i in range(32)]
@@ -70,7 +74,7 @@ def asm_to_bin(asm_code: List[str], base: str, extensions: List[str] = []) -> np
     for i in range(num_instructions):
         raw_instruction: str = asm_code[i]
         result: np.uint32 = np.uint32(0)
-        parsed_instruction: re.Match = compiled_regex.match(raw_instruction)
+        parsed_instruction: re.Match = riscv_parser.match(raw_instruction)
         if (parsed_instruction is None):
             print("Error: Wrong instruction format in line", i)
             errored = True
@@ -241,6 +245,15 @@ def calculate_immediate(instruction_type, instruction_data, parsed_instruction, 
     return immediate, num_bits, errored
 
 
+def reg_from_alias(match):
+    return match.group(1) + reg_alias[match.group(2)]
+
+
+def purify_asm(asm_code: List[str]) -> List[str]:
+    pure_asm = [reg_parser.sub(reg_from_alias, line) for line in asm_code]
+    return pure_asm
+
+
 def sample():
     sample_code = [
         "add x31, x30, x0",
@@ -254,22 +267,23 @@ def sample():
         "bge x6, x5, 0x2C",
         "sw x6, 0(x29)",
         "sub x5, x6, x7",
-        "addi x8, x9, 12",
-        "lh x7, -6(x19)",
-        "srai x6, x7, 29",   # Error decodificando inmediato
-        "sb x30, 45(x0)",
-        "beq x8, x30, 0x10",
-        "lui x21, 0x8cdef",
-        "jal x1, 0xa67f8"]
-    res = asm_to_bin(sample_code, "RV32I", ["RVM"])
+        "addi s0, s1, 12",
+        "lh t2, -6(s3)",
+        "srai t1,t2, 29",
+        "sb t5, 45(zero)",
+        "beq s0, t5, 0x10",
+        "lui s5, 0x8cdef",
+        "jal ra, 0xa67f8"]
+    pure_asm = purify_asm(sample_code)
+    res = asm_to_bin(pure_asm, "RV32I", ["RVM"])
     for i in range(len(res)):
-        instruction = sample_code[i]
+        instruction = pure_asm[i]
         encoded_instruction = res[i]
         print(f"{instruction} -> {encoded_instruction:#0{10}x}")
         print(np.binary_repr(encoded_instruction, width=32))
     asm = bin_to_asm(res, "RV32I", ["RVM"])
     for i in range(len(asm)):
-        print(sample_code[i], "->", asm[i])
+        print(pure_asm[i], "->", asm[i])
 
 if __name__ == "__main__":
     sample()
