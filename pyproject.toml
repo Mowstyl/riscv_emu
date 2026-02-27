@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "riscv_emu_mowstyl"
+version = "0.0.1"
+authors = [
+  { name="Mowstyl", email="indikalesken@hotmail.com" },
+]
+description = "RISC-V Emulator"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Programming Language :: Assembly",
+    "Topic :: System :: Emulators",
+]
+license = "GPL-3.0-or-later"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/mowstyl/riscv_emu"
+Issues = "https://github.com/mowstyl/riscv_emu/issues"
