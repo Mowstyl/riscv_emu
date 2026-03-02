@@ -7,8 +7,8 @@ if not fs.exists('RISC-V-Parser/README.md')
   error('Missing the `RISC-V-Parser` git submodule! Run `git submodule update --init` to fix this.')
 endif
 
-py.extension_module('_rvparser',
-  ['_rvparser.c'],
+py.extension_module('_rvparser_handler',
+  ['_rvparser_handler.c'],
   c_args: largefile_define,
   install: true,
   subdir: 'rvemu/compiler',
@@ -17,6 +17,7 @@ py.extension_module('_rvparser',
 py.install_sources(
   [
     '__init__.py',
+    '_rvparser.py',
   ],
   subdir: 'rvemu/compiler'
 )

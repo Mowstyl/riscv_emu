@@ -35,7 +35,7 @@ static PyMethodDef rvParserMethods[] = {
 };
 
 static struct PyModuleDef rvparser_module = {
-	PyModuleDef_HEAD_INIT, "rvparser", /* name of module */
+	PyModuleDef_HEAD_INIT, "_rvparser_handler", /* name of module */
 	NULL, /* module documentation, may be NULL */
 	-1, /* size of per-interpreter state of the module,
 	or -1 if the module keeps state in global variables. */
@@ -43,7 +43,7 @@ static struct PyModuleDef rvparser_module = {
 };
 
 PyMODINIT_FUNC
-PyInit_calling(void)
+PyInit__rvparser_handler(void)
 {
 	PyObject *m;
 
@@ -52,7 +52,7 @@ PyInit_calling(void)
 	if (m == NULL)
 		return NULL;
 
-	rvParserError = PyErr_NewException("rvemu.parser.error", NULL, NULL);
+	rvParserError = PyErr_NewException("rvemu.compiler.error", NULL, NULL);
 	Py_XINCREF(rvParserError);
 	if (PyModule_AddObject(m, "error", rvParserError) < 0) {
 		Py_XDECREF(rvParserError);
