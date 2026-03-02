@@ -73,7 +73,6 @@ rvparser_parse(PyObject *ignored,
 	     *out;
 	const char *in_file,
 			   *out_file;
-	line_encaps parsed_src;
 
 	if (nargs != 2) {
 		PyErr_SetString(rvParserError, "Syntax: rvparser.parse(<infile>, <outfile>)");
