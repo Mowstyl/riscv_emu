@@ -18,7 +18,7 @@
 
 #define PY_SSIZE_T_CLEAN
 
-#include "rvp-utility-json.h"
+#include "RISC-V-Parser/rvp-utility-json.h"
 
 
 static PyObject *rvParserError;
