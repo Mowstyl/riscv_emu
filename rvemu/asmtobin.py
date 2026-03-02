@@ -19,7 +19,7 @@
 
 
 from __future__ import annotations
-from instruction_set import InstructionType, getInstructionSet, reg_alias
+from instruction_set import InstructionType, getInstructionSet, reg_alias, pseudo_translate
 from bintoasm import bin_to_asm
 from math import ceil
 
@@ -52,9 +52,24 @@ Groups:
     10: offset
     11: rs2 id (containing mem. addr.) (without the x)
 '''
+
+reg_regex = r"(?:(?:x|t|s|a)(?:[1-3]?[0-9]))|(?:(?:g|f|t|s)p)|(?:ra|zero)"
+
+imm_regex = r"(?:0(?:x|X)[0-9a-fA-F]+)|(?:0(?:b|B)[01]+)|(?:(?:\+|-)?[0-9]+)"
+
+arg_regex = rf"(?:{reg_regex})|(?:{imm_regex})"
+
+test_regex = rf"^\s*([a-z\.]+)(?:\s+({arg_regex})(?:\s*,\s*({arg_regex}))?(?:\s*,|\(\s*({arg_regex})\))?)?\s*$"
+
+print("AAAAAA:", test_regex)
+
+pseudo_regex = r"^\s*([a-z\.]+)(?:\s+(?:x([1-3]?[0-9]))?\s*,?\s*(?:(?:(?:x([1-3]?[0-9])\s*,\s*)?(?:(?:x([1-3]?[0-9]))|(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)))|(?:(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)\s*\(\s*x([1-3]?[0-9])\s*\)))?(?:\s*,\s*x([1-3]?[0-9]))?)?$"
+
 riscv_regex = r"^\s*([a-z\.]+)\s+x([1-3]?[0-9])\s*,\s*(?:(?:(?:x([1-3]?[0-9])\s*,\s*)?(?:(?:x([1-3]?[0-9]))|(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)))|(?:(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)\s*\(\s*x([1-3]?[0-9])\s*\)))$"
 
 reg_regex = r"((?:\s*,|\()|\s+)((?:(?:s|t|a)[1-9]*[0-9])|zero|ra|sp|tp|gp|fp)"
+
+pseudo_parser = re.compile(pseudo_regex)
 
 riscv_parser = re.compile(riscv_regex)
 
@@ -250,7 +265,25 @@ def reg_from_alias(match):
 
 
 def purify_asm(asm_code: List[str]) -> List[str]:
-    pure_asm = [reg_parser.sub(reg_from_alias, line) for line in asm_code]
+    pure_asm = []
+    errored = False
+    for i in range(len(asm_code)):
+        raw_line = asm_code[i]
+        line = reg_parser.sub(reg_from_alias, raw_line)
+        parsed = riscv_parser.match(line)
+        if parsed is None:
+            print(f"Error: Could not parse instruction in line {i}")
+            errored = True
+            continue
+        name = parsed.group(1)
+        if name in pseudo_translate:
+            translation = pseudo_translate[name](parsed)
+            for instruction in translation:
+                pure_asm.append(line)
+        else:
+            pure_asm.append(line)
+    if errored:
+        return None
     return pure_asm
 
 

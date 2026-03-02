@@ -126,6 +126,133 @@ rv_instructions: Dict[str, Dict[str, Any]] = {
     "RVM": rvm_instructions
     }
 
+BIT_11 = 1 << 11
+MASK0_11 = ((1 << 12) - 1)
+MASK12_31 = ((1 << 20) - 1) << 12
+
+
+def split_immediate(imm):
+    least = imm & MASK0_11
+    most = imm >> 12
+    if (least & BIT_11) == 1:
+        most += 1
+    return least, most
+
+
+def rebuild_immediate(match):
+    sign = match.group(5)
+    if sign is None:
+        sign = ""
+    prefix = match.group(6)
+    if base is None:
+        prefix = ""
+        base = 10
+    elif base == "x":
+        prefix = "0x"
+        base = 16
+    else:
+        prefix = "0b"
+        base = 2
+    return sign + prefix + val, base
+
+
+def imm_mem_instruction(match):
+    val = match.group(7)
+    if val is None:
+        return [match.string]
+    raw_imm, base = rebuild_immediate(match)
+    imm = int(raw_imm, base)
+    least, most = split_immediate(imm)
+    s1 = match.group(12)
+    if s1 is None:
+        instruction = match.group(1)
+        if instruction == "la":
+            instruction = f"addi x{match.group(2)}, x{match.group(2)}, {least}"
+        else:
+            instruction = f"{match.group(1)} x{match.group(2)}, {least}(x{match.group(2)})"
+        return [f"auipc x{match.group(2)}, {most}",
+                instruction]
+    return [f"auipc x{s1}, {most}",
+            f"{match.group(1)} x{match.group(2)}, {least}(x{s1})"]
+
+
+def load_imm(match):
+    raw_imm, base = rebuild_immediate(match)
+    imm = int(raw_imm, base)
+    bin_imm = np.binary_repr(imm)
+    if len(bin_imm) <= 12:
+        return [f"addi x{match.group(2)}, x0, {imm}"]
+    least, most = split_immediate(imm)
+    return [f"lui x{match.group(2)}, {most}",
+            f"addi x{match.group(2)}, x{match.group(2)}, {least}"]
+
+
+def call_function(match):
+    raw_imm, base = rebuild_immediate(match)
+    imm = int(raw_imm, base)
+    bin_imm = np.binary_repr(imm)
+    if len(bin_imm) <= 21:
+        return [f"jal x1, {imm}"]
+    least, most = split_immediate(imm)
+    return [f"auipc x1, {most}",
+            f"jalr x1, x1, {least}"]
+
+
+pseudo_translate = {
+    "seqz": lambda match: [f"sltiu x{match.group(2)}, x{match.group(4)}, 1"],
+    "snez": lambda match: [f"sltu x{match.group(2)}, x0, x{match.group(4)}"],
+    "sltz": lambda match: [f"slt x{match.group(2)}, x{match.group(4)}, x0"],
+    "snez": lambda match: [f"slt x{match.group(2)}, x0, x{match.group(4)}"],
+    "neg":  lambda match: [f"sub x{match.group(2)}, x0, x{match.group(4)}"],
+    "not":  lambda match: [f"xori x{match.group(2)}, x{match.group(4)}, -1"],
+    "add":  lambda match: [match.string if match.group(7) is None
+                           else f"addi x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "slt":  lambda match: [match.string if match.group(7) is None
+                           else f"slti x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "sltu": lambda match: [match.string if match.group(7) is None
+                           else f"sltiu x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "and":  lambda match: [match.string if match.group(7) is None
+                           else f"andi x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "or":   lambda match: [match.string if match.group(7) is None
+                           else f"ori x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "xor":  lambda match: [match.string if match.group(7) is None
+                           else f"xori x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "sll":  lambda match: [match.string if match.group(7) is None
+                           else f"slli x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "srl":  lambda match: [match.string if match.group(7) is None
+                           else f"srli x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "sra":  lambda match: [match.string if match.group(7) is None
+                           else f"srai x{match.group(2)}, x{match.group(3)}, {match.group(7)}"],
+    "lb":   imm_mem_instruction,
+    "lh":   imm_mem_instruction,
+    "lw":   imm_mem_instruction,
+    "sb":   imm_mem_instruction,
+    "sh":   imm_mem_instruction,
+    "sw":   imm_mem_instruction,
+    "mv":   lambda match: [f"addi x{match.group(2)}, x{match.group(4)}, 0"],
+    "li":   load_imm,
+    "la":   imm_mem_instruction,
+    "ble":  lambda match: [f"bge x{match.group(3)}, x{match.group(2)}, {rebuild_immediate(match)[0]}"],
+    "bgt":  lambda match: [f"blt x{match.group(3)}, x{match.group(2)}, {rebuild_immediate(match)[0]}"],
+    "bleu": lambda match: [f"bgeu x{match.group(3)}, x{match.group(2)}, {rebuild_immediate(match)[0]}"],
+    "bgtu": lambda match: [f"bltu x{match.group(3)}, x{match.group(2)}, {rebuild_immediate(match)[0]}"],
+    "beqz": lambda match: [f"beq x{match.group(2)}, x0, {rebuild_immediate(match)[0]}"],
+    "bnez": lambda match: [f"bne x{match.group(2)}, x0, {rebuild_immediate(match)[0]}"],
+    "bltz": lambda match: [f"blt x{match.group(2)}, x0, {rebuild_immediate(match)[0]}"],
+    "bgez": lambda match: [f"bge x{match.group(2)}, x0, {rebuild_immediate(match)[0]}"],
+    "blez": lambda match: [f"bge x0, x{match.group(2)}, {rebuild_immediate(match)[0]}"],
+    "bgtz": lambda match: [f"blt x0, x{match.group(2)}, {rebuild_immediate(match)[0]}"],
+    "jalr": lambda match: [match.string if match.group(3) is not None
+                           else f"jalr x1, x{match.group(2)}, 0"],
+    "jal":  lambda match: [match.string if match.group(2) is not None
+                           else f"jal x1, {rebuild_immediate(match)}"],
+    "call": call_function,
+    "ret":  lambda match: ["jalr x0, x1, 0"],
+    "j":  lambda match: [f"jal x0, {rebuild_immediate(match)[0]}"],
+    "jr":  lambda match: [f"jalr x0, x{match.group(2)}, 0"],
+    "nop":  lambda match: [f"addi x0, x0, 0"]
+    }
+
 
 def getInstructionSet(base: str, extensions: List[str] = []) -> Dict[str, Dict[str, Any]]:
     instruction_set = rv_instructions[base].copy()
