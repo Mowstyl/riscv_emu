@@ -88,7 +88,7 @@ rvparser_parse(PyObject *ignored,
 	in_file = PyUnicode_AsUTF8(args[0]);
 	out_file = PyUnicode_AsUTF8(args[1]);
 
-	if (!str1 || !str2) {
+	if (!in_file || !out_file) {
 		return NULL;
 	}
 
