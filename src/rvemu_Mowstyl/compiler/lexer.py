@@ -140,14 +140,12 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
                     errored = True
                 has_tag = True
                 current += ":"
-            if character == ",":
-                if last_char == ",":
-                    print(f"[ERROR] Unexpected '{character}' at {filename}:{number}:{index}")
-                    errored = True
             last_char = character
             if current != "":
                 tokens.append(current)
                 current = ""
+            if character == ",":
+                tokens.append(",")
             continue
 
         # -----------------------------
