@@ -8,7 +8,10 @@ if not fs.exists('RISC-V-Parser/README.md')
 endif
 
 py.extension_module('_rvparser',
-  ['_rvparser.c'],
+  ['_rvparser.c',
+  'RISC-V-Parser/riscv-parse.c',
+  'RISC-V-Parser/riscv-utility-functions.c',
+  'RISC-V-Parser/riscv-utility-json.c'],
   c_args: largefile_define,
   install: true,
   subdir: 'rvemu/compiler',
