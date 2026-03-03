@@ -30,7 +30,7 @@ rvparser_parse(PyObject *ignored,
 			   Py_ssize_t nargs);
 
 static PyMethodDef rvParserMethods[] = {
-	{ "parse", (PyCFunction) rvparser_parse, METH_STATIC | METH_FASTCALL, "Parses an ASM code file and saves the result to a JSON formatted file" },
+	{ "parse", (PyCFunction) rvparser_parse, METH_FASTCALL, "Parses an ASM code file and saves the result to a JSON formatted file" },
 	{ NULL, NULL, 0, NULL } /* Sentinel */
 };
 
