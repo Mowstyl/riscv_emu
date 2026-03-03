@@ -66,11 +66,18 @@ PyInit__rvparser(void)
 
 int main(int argc, char *argv[])
 {
-	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
-	if (program == NULL) {
-		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
-		exit(1);
+	PyStatus status;
+	PyConfig config;
+	PyConfig_InitPythonConfig(&config);
+	status = PyConfig_SetBytesString(&config, &config.program_name, argv[0]);
+	if (PyStatus_Exception(status)) {
+		goto exception;
 	}
+	status = Py_InitializeFromConfig(&config);
+	if (PyStatus_Exception(status)) {
+		goto exception;
+	}
+	PyConfig_Clear(&config)
 
 	/* Add a built-in module, before Py_Initialize */
 	if (PyImport_AppendInittab("_rvparser", PyInit__rvparser) == -1) {
@@ -78,9 +85,6 @@ int main(int argc, char *argv[])
 				"Error: could not extend in-built modules table\n");
 		exit(1);
 	}
-
-	/* Pass argv[0] to the Python interpreter */
-	Py_SetProgramName(program);
 
 	/* Initialize the Python interpreter.  Required.
 	 *    If this step fails, it will be a fatal error. */
@@ -94,8 +98,14 @@ int main(int argc, char *argv[])
 		PyErr_Print();
 		fprintf(stderr, "Error: could not import module '_rvparser'\n");
 	}
-	PyMem_RawFree(program);
+	if (Py_FinalizeEx() < 0) {
+		exit(120);
+	}
 	return 0;
+
+exception:
+	PyConfig_Clear(&config);
+	Py_ExitStatusException(status);
 }
 
 //Arguments: input file, output file
