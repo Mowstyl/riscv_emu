@@ -623,7 +623,6 @@ mid_line *string_tokenizer(input_lines work, mid_line *output, int fill, int rea
 char *symbol_decoder(mid_line work) {
 	char *label = malloc(50 * sizeof(char));
 	int i = 0;
-	char *setbool;
 	/**
 	 * We identify the name of the symbol searching for name's terminator (e.g. '', \0, :, =)
 	 * all the character before the terminator are added to the name field of the output
@@ -675,13 +674,10 @@ void symbol_analizer(instruction **input, char *symbol) {
  * 1) work, single mid_line object containing an instruction that has to be managed
  */
 instruction *instruction_decoder(mid_line work) {
-	char *opcode;
 	char *symbol;
 	char reg1[5], reg2[5], reg3[5];
 	instruction *return_value = malloc(sizeof(instruction));
 	int op_size = strlen(work.tokens[0]) + 1;
-	int symb_size;
-	int size, strip_size;
 	int initial, final;
 	char *ptr;
 	family fam;
