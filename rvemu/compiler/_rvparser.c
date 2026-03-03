@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	if (PyStatus_Exception(status)) {
 		goto exception;
 	}
-	PyConfig_Clear(&config)
+	PyConfig_Clear(&config);
 
 	/* Add a built-in module, before Py_Initialize */
 	if (PyImport_AppendInittab("_rvparser", PyInit__rvparser) == -1) {
