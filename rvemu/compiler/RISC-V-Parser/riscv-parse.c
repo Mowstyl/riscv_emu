@@ -57,6 +57,7 @@ input_lines line_feeder(FILE *work) {
 
 	//Input-reading functions return value
 	int retval;
+	char *fgets_res;
 
 	/*Enumeration which specifies failures (or the lack thereof) during various phases of this function's execution:
 	 * FAIL_RET_ALLOC: return structure initial allocation failed
@@ -99,7 +100,10 @@ input_lines line_feeder(FILE *work) {
 
 	//Read first line to feel the ground
 	errno = 0;
-	retval = fgets(curr_line.contents, curr_line.buffer_size, work);
+	fgets_res = fgets(curr_line.contents, curr_line.buffer_size, work);
+	retval = -1;
+	if (fgets_res != NULL)
+		retval = strlen(curr_line.contents);
 
 	{
 		/* Syntax checking and input normalization is performed via an acceptor automata.
@@ -395,12 +399,15 @@ input_lines line_feeder(FILE *work) {
 
 			//Continue with the next line (if any)
 			errno = 0;
-			retval = fgets(curr_line.contents, curr_line.buffer_size, work);
+			fgets_res = fgets(curr_line.contents, curr_line.buffer_size, work);
+			retval = -1;
+			if (fgets_res != NULL)
+				retval = strlen(curr_line.contents);
 		}
 	}
 
 	//Check if the EOF was due to an error
-	if((errno == ENOMEM) || (errno == EINVAL) || (ferror(work))) {
+	if((errno == EBADF) || (ferror(work))) {
 		//Proceed following the IO error handling pathway, propagating the error if possible.
 		status = FAIL_PARSE;
 
