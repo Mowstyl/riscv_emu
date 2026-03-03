@@ -1,5 +1,4 @@
 //Include parse library function headers and data structures
-#include <stdio.h>
 #include "riscv-parse.h"
 
 typedef struct {
