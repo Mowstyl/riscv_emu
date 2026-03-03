@@ -64,50 +64,6 @@ PyInit__rvparser(void)
 	return m;
 }
 
-int main(int argc, char *argv[])
-{
-	PyStatus status;
-	PyConfig config;
-	PyConfig_InitPythonConfig(&config);
-	status = PyConfig_SetBytesString(&config, &config.program_name, argv[0]);
-	if (PyStatus_Exception(status)) {
-		goto exception;
-	}
-	status = Py_InitializeFromConfig(&config);
-	if (PyStatus_Exception(status)) {
-		goto exception;
-	}
-	PyConfig_Clear(&config);
-
-	/* Add a built-in module, before Py_Initialize */
-	if (PyImport_AppendInittab("_rvparser", PyInit__rvparser) == -1) {
-		fprintf(stderr,
-				"Error: could not extend in-built modules table\n");
-		exit(1);
-	}
-
-	/* Initialize the Python interpreter.  Required.
-	 *    If this step fails, it will be a fatal error. */
-	Py_Initialize();
-
-	/* Optionally import the module; alternatively,
-	 *    import can be deferred until the embedded script
-	 *    imports it. */
-	PyObject *pmodule = PyImport_ImportModule("_rvparser");
-	if (!pmodule) {
-		PyErr_Print();
-		fprintf(stderr, "Error: could not import module '_rvparser'\n");
-	}
-	if (Py_FinalizeEx() < 0) {
-		exit(120);
-	}
-	return 0;
-
-exception:
-	PyConfig_Clear(&config);
-	Py_ExitStatusException(status);
-}
-
 //Arguments: input file, output file
 static PyObject *
 rvparser_parse(PyObject *ignored,
