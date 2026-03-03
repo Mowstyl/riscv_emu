@@ -2,13 +2,12 @@ import re
 
 
 #comment_regex = r"(?<!\\)(?:#|(?:\/\/))"
-valid_escapes = {"a", "b", "e", "f", "n", "r", "t", "v", "\\", "'", '"', "?"}
-
+valid_escapes = "abefnrtv\\'\"?"
 valid_octal = "01234567"
 valid_hex = "0123456789abcdefABCDEF"
 
 
-def tokenize(line, filename, number, in_comment):
+def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[List[Str], bool, bool]:
     tokens = []
     errored = False
     escaping = False
@@ -119,6 +118,16 @@ def tokenize(line, filename, number, in_comment):
             continue
 
         # -----------------------------
+        # Extract division sign to new token
+        # -----------------------------
+        if last_char == "/":
+            current = current[:-1]  # We remove the last / character
+            if current != "":
+                tokens.append(current)
+                current = ""
+            tokens.append("/")
+
+        # -----------------------------
         # Whitespace or separators
         # -----------------------------
         if character.isspace() or character in ",:":
@@ -139,6 +148,16 @@ def tokenize(line, filename, number, in_comment):
             if current != "":
                 tokens.append(current)
                 current = ""
+            continue
+
+        # -----------------------------
+        # Parenthesis
+        # -----------------------------
+        if character in "()+-*%":
+            if current != "":
+                tokens.append(current)
+                current = ""
+            tokens.append(character)
             continue
 
         # -----------------------------

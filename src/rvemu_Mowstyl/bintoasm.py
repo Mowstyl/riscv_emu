@@ -19,7 +19,7 @@
 
 
 from __future__ import annotations
-from instruction_set import InstructionType, getReversedSet
+from .instruction_set import InstructionType, getReversedSet
 
 import numpy as np
 

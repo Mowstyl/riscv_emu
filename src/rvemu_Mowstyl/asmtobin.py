@@ -19,8 +19,9 @@
 
 
 from __future__ import annotations
-from instruction_set import InstructionType, getInstructionSet, reg_alias, pseudo_translate
-from bintoasm import bin_to_asm
+from .instruction_set import InstructionType, getInstructionSet, reg_alias, pseudo_translate
+from .bintoasm import bin_to_asm
+from .compiler import lexer
 from math import ceil
 
 import numpy as np
@@ -61,8 +62,6 @@ arg_regex = rf"(?:{reg_regex})|(?:{imm_regex})"
 
 test_regex = rf"^\s*([a-z\.]+)(?:\s+({arg_regex})(?:\s*,\s*({arg_regex}))?(?:\s*,|\(\s*({arg_regex})\))?)?\s*$"
 
-print("AAAAAA:", test_regex)
-
 pseudo_regex = r"^\s*([a-z\.]+)(?:\s+(?:x([1-3]?[0-9]))?\s*,?\s*(?:(?:(?:x([1-3]?[0-9])\s*,\s*)?(?:(?:x([1-3]?[0-9]))|(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)))|(?:(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)\s*\(\s*x([1-3]?[0-9])\s*\)))?(?:\s*,\s*x([1-3]?[0-9]))?)?$"
 
 riscv_regex = r"^\s*([a-z\.]+)\s+x([1-3]?[0-9])\s*,\s*(?:(?:(?:x([1-3]?[0-9])\s*,\s*)?(?:(?:x([1-3]?[0-9]))|(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)))|(?:(\+|-)?(?:0(x|b))?([0-9a-fA-F]+)\s*\(\s*x([1-3]?[0-9])\s*\)))$"
@@ -77,6 +76,19 @@ reg_parser = re.compile(reg_regex)
 
 
 BIT_MASK: List[int] = [np.uint32(1 << i) for i in range(32)]
+
+
+def parse(file_name):
+    all_tokens = []
+    i = 1
+    in_comment = False
+    with open(file_name, 'r') as file:
+        for line in file:
+            tokens, errored, in_comment = lexer.tokenize(line, file_name, i, in_comment)
+            if tokens is not None and len(tokens) > 0:
+                all_tokens.append(tokens)
+            i += 1
+    print(all_tokens)
 
 
 def asm_to_bin(asm_code: List[str], base: str, extensions: List[str] = []) -> npt.NDArray[np.int32]:
