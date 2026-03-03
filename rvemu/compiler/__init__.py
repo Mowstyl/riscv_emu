@@ -1,3 +1,3 @@
-from . import _rvparser
+from _rvparser import parse
 
-__all__ = _rvparser.__all__.copy()
+#__all__ = _rvparser.__all__

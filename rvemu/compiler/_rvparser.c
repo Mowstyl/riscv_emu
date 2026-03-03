@@ -35,7 +35,7 @@ static PyMethodDef rvParserMethods[] = {
 };
 
 static struct PyModuleDef rvparser_module = {
-	PyModuleDef_HEAD_INIT, "_rvparser_handler", /* name of module */
+	PyModuleDef_HEAD_INIT, "_rvparser", /* name of module */
 	NULL, /* module documentation, may be NULL */
 	-1, /* size of per-interpreter state of the module,
 	or -1 if the module keeps state in global variables. */
@@ -43,7 +43,7 @@ static struct PyModuleDef rvparser_module = {
 };
 
 PyMODINIT_FUNC
-PyInit__rvparser_handler(void)
+PyInit__rvparser(void)
 {
 	PyObject *m;
 
@@ -64,6 +64,40 @@ PyInit__rvparser_handler(void)
 	return m;
 }
 
+int main(int argc, char *argv[])
+{
+	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
+	if (program == NULL) {
+		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
+		exit(1);
+	}
+
+	/* Add a built-in module, before Py_Initialize */
+	if (PyImport_AppendInittab("_rvparser", PyInit__rvparser) == -1) {
+		fprintf(stderr,
+				"Error: could not extend in-built modules table\n");
+		exit(1);
+	}
+
+	/* Pass argv[0] to the Python interpreter */
+	Py_SetProgramName(program);
+
+	/* Initialize the Python interpreter.  Required.
+	 *    If this step fails, it will be a fatal error. */
+	Py_Initialize();
+
+	/* Optionally import the module; alternatively,
+	 *    import can be deferred until the embedded script
+	 *    imports it. */
+	PyObject *pmodule = PyImport_ImportModule("_rvparser");
+	if (!pmodule) {
+		PyErr_Print();
+		fprintf(stderr, "Error: could not import module '_rvparser'\n");
+	}
+	PyMem_RawFree(program);
+	return 0;
+}
+
 //Arguments: input file, output file
 static PyObject *
 rvparser_parse(PyObject *ignored,
@@ -75,7 +109,7 @@ rvparser_parse(PyObject *ignored,
 			   *out_file;
 
 	if (nargs != 2) {
-		PyErr_SetString(rvParserError, "Syntax: rvparser.parse(<infile>, <outfile>)");
+		PyErr_SetString(rvParserError, "Syntax: parse(<infile>, <outfile>)");
 		return NULL;
 	}
 
