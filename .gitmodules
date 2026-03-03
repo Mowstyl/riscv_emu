@@ -1,3 +1,0 @@
-[submodule "src/riscv_emu_mowstyl/compiler/RISC-V-Parser"]
-	path = src/riscv_emu_mowstyl/rvemu/compiler/RISC-V-Parser
-	url = https://github.com/zoythum/RISC-V-Parser
