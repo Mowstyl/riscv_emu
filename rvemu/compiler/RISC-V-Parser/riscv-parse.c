@@ -21,7 +21,7 @@ typedef struct {
  * Be sure to clean your assembler source from such directives before parsing.
  *
  * EXTENSIONS USED:
- * - GNU: getline(), isblank()
+ * - GNU: isblank()
  *
  * THIS FUNCTION MANIPULATES THE errno GLOBAL VARIABLE in the following way:
  * - ENOMEM: when any of the memory allocation functions fails
@@ -99,7 +99,7 @@ input_lines line_feeder(FILE *work) {
 
 	//Read first line to feel the ground
 	errno = 0;
-	retval = getline(&(curr_line.contents), &(curr_line.buffer_size), work);
+	retval = fgets(curr_line.contents, curr_line.buffer_size, work);
 
 	{
 		/* Syntax checking and input normalization is performed via an acceptor automata.
@@ -142,7 +142,7 @@ input_lines line_feeder(FILE *work) {
 
 			obuff.cursor = 0;
 
-			//Use the value returned by getline() to cycle over the characters.
+			//Use the value returned by fgets() to cycle over the characters.
 			for(int c = 0; c < retval && acceptor_state != SKIP; c++) {
 				char curr_char = curr_line.contents[c];
 
@@ -395,7 +395,7 @@ input_lines line_feeder(FILE *work) {
 
 			//Continue with the next line (if any)
 			errno = 0;
-			retval = getline(&(curr_line.contents), &(curr_line.buffer_size), work);
+			retval = fgets(curr_line.contents, curr_line.buffer_size, work);
 		}
 	}
 
