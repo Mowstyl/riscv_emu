@@ -1,10 +1,49 @@
-import re
-
-
 #comment_regex = r"(?<!\\)(?:#|(?:\/\/))"
 valid_escapes = "abefnrtv\\'\"?"
 valid_octal = "01234567"
 valid_hex = "0123456789abcdefABCDEF"
+valid_operations = {
+    "||": 12,
+    "&&": 11,
+    "|":  10,
+    "^":   9,
+    "&":   8,
+    "==":  7,
+    "!=":  7,
+    "<":   6,
+    "<=":  6,
+    ">":   6,
+    ">=":  6,
+    "<<":  5,
+    ">>":  5,
+    "+":   4,
+    "-":   4,
+    "*":   3,
+    "/":   3,
+    "%":   3,
+    "!":   2,
+    "~":   2
+    }
+first_op = {operator[0] for operator in valid_operations}
+second_op = {operator[1] for operator in valid_operations if len(operator) > 1}
+op_symbols = first_op & second_op
+
+
+def tokenize_file(file_name: str) -> List[List[str]]:
+    all_tokens = []
+    i = 1
+    in_comment = False
+    with open(file_name, 'r') as file:
+        for line in file:
+            tokens, errored, in_comment = tokenize(line, file_name, i, in_comment)
+            if tokens is not None and len(tokens[1]) > 0:
+                all_tokens.append(tokens)
+            i += 1
+    if in_comment:
+        print(f"[WARNING] Unclosed multi-line comment")
+    if errored:
+        all_tokens = None
+    return all_tokens
 
 
 def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[List[Str], bool, bool]:
@@ -73,6 +112,7 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
                 in_string = False
                 tokens.append(current)
                 current = ""
+                character = ""  # Do not append the closing quotes
             current += character
             continue
 
@@ -100,9 +140,13 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
         # Detect single-line comment with double slash
         # -----------------------------
         if last_char == "/" and character == "/":
-            current = current[:-1]  # We remove the last / character
             if current != "":
-                tokens.append(current)
+                current = current[:-1]
+                if current != "":
+                    tokens.append(current)
+                    current = ""
+            else:
+                tokens = tokens[:-1]
             last_char = None
             break
 
@@ -110,22 +154,16 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
         # Detect multi-line comment
         # -----------------------------
         if last_char == "/" and character == "*":
-            current = current[:-1]  # We remove the last / character
             if current != "":
-                tokens.append(current)
+                current = current[:-1]
+                if current != "":
+                    tokens.append(current)
+                    current = ""
+            else:
+                tokens = tokens[:-1]
             in_comment = True
             last_char = None
             continue
-
-        # -----------------------------
-        # Extract division sign to new token
-        # -----------------------------
-        if last_char == "/":
-            current = current[:-1]  # We remove the last / character
-            if current != "":
-                tokens.append(current)
-                current = ""
-            tokens.append("/")
 
         # -----------------------------
         # Whitespace or separators
@@ -140,7 +178,7 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
                     errored = True
                 has_tag = True
                 current += ":"
-            last_char = character
+            last_char = None
             if current != "":
                 tokens.append(current)
                 current = ""
@@ -149,12 +187,19 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
             continue
 
         # -----------------------------
-        # Parenthesis
+        # Operations
         # -----------------------------
-        if character in "()+-*%":
+        last_char = character
+
+        if character in op_symbols or character in "()":
             if current != "":
                 tokens.append(current)
                 current = ""
+            elif character in second_op and last_char in first_op:
+                composite = last_char + character
+                if composite in valid_operations:
+                    tokens = tokens[:-1]
+                    character = composite
             tokens.append(character)
             continue
 
@@ -162,7 +207,6 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
         # Regular character
         # -----------------------------
         current += character
-        last_char = character
 
     # -----------------------------
     # End of line
@@ -173,4 +217,4 @@ def tokenize(line: str, filename: str, number: int, in_comment: bool) -> Tuple[L
     if current:
         tokens.append(current)
 
-    return tokens, errored, in_comment
+    return (number, tokens), errored, in_comment

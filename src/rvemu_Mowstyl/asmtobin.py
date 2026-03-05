@@ -19,9 +19,9 @@
 
 
 from __future__ import annotations
-from .instruction_set import InstructionType, getInstructionSet, reg_alias, pseudo_translate
 from .bintoasm import bin_to_asm
-from .compiler import lexer
+from .compiler import lexer, parser
+from .compiler.instruction_set import InstructionType, getInstructionSet, reg_alias, pseudo_translate
 from math import ceil
 
 import numpy as np
@@ -79,16 +79,9 @@ BIT_MASK: List[int] = [np.uint32(1 << i) for i in range(32)]
 
 
 def parse(file_name):
-    all_tokens = []
-    i = 1
-    in_comment = False
-    with open(file_name, 'r') as file:
-        for line in file:
-            tokens, errored, in_comment = lexer.tokenize(line, file_name, i, in_comment)
-            if tokens is not None and len(tokens) > 0:
-                all_tokens.append(tokens)
-            i += 1
+    all_tokens = lexer.tokenize_file(file_name)
     print(all_tokens)
+    print(parser.parse_tokens(all_tokens))
 
 
 def asm_to_bin(asm_code: List[str], base: str, extensions: List[str] = []) -> npt.NDArray[np.int32]:
